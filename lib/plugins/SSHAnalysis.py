@@ -1,5 +1,9 @@
 # coding:utf-8
-import os, optparse
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import os
+import optparse
 
 
 # 作者：咚咚呛
@@ -13,7 +17,7 @@ import os, optparse
 # 2】分析
 
 
-class SSH_Analysis:
+class SSHAnalysis:
     def __init__(self, log='', log_dir='', ip_failed_count=50, ips_failed_count=200):
         # 单IP错误的次数，超过此错误代表发生了爆破行为
         self.ip_failed_count = ip_failed_count
@@ -27,7 +31,8 @@ class SSH_Analysis:
             self.log_dir = '/var/log/' if not log_dir else log_dir
             self.dir_file_detect()
         # secure日志路径
-        if log: self.attack_detect(log)
+        if log:
+            self.attack_detect(log)
 
     # 遍历secure类文件去分析
     def dir_file_detect(self):
@@ -36,15 +41,8 @@ class SSH_Analysis:
         for log in files:
             self.attack_detect(log)
 
-    # 数组去重
-    def reRepeat(self, old):
-        new_li = []
-        for i in old:
-            if i not in new_li:
-                new_li.append(i)
-        return new_li
-
-    def filter(self, old, count):
+    @staticmethod
+    def filter(old, count):
         new_li = []
         for key in old:
             if old[key] > count:
@@ -52,7 +50,8 @@ class SSH_Analysis:
         return new_li
 
     # 实现counter函数，由于某些版本不支持，又不想过多引入库
-    def Counter(self, old):
+    @staticmethod
+    def counter(old):
         count_dict = dict()
         for item in old:
             if item in count_dict:
@@ -60,6 +59,14 @@ class SSH_Analysis:
             else:
                 count_dict[item] = 1
         return count_dict
+
+    @staticmethod
+    def unique_it(old):
+        new_li = []
+        for i in old:
+            if i not in new_li:
+                new_li.append(i)
+        return new_li
 
     # 爆破成功的信息
     def attack_detect(self, log):
@@ -91,37 +98,39 @@ class SSH_Analysis:
                 ip = i.split(': ')[1].split()[5]
                 user = i.split(': ')[1].split()[3]
                 # time = i.split(' sshd[')[0]
-                time = ' '.join(i.replace('  ', ' ').split(' ', 4)[:3]) + " " + year
+                time_ = ' '.join(i.replace('  ', ' ').split(' ', 4)[:3]) + " " + year
                 # 获取所有登陆成功的记录
-                correct_infos.append({'ip': ip, 'user': user, 'time': time})
+                correct_infos.append({'ip': ip, 'user': user, 'time': time_})
         # 记录登陆失败攻击源IP地址和尝试次数
         # 1.1 判断是否发生了爆破行为,failed_ip_dict为存在爆破的失败ip列表:次数
-        failed_ip_dict = self.filter(dict(self.Counter(failed_ip)), self.ip_failed_count)
+        failed_ip_dict = self.filter(dict(self.counter(failed_ip)), self.ip_failed_count)
 
         # 1.2 判断是否发生了C端类的爆破行为，
         for key in failed_ip:
             failed_c_ips.append(key.rsplit('.', 1)[0])
-        failed_c_ips_dict = self.filter(dict(self.Counter(failed_c_ips)), self.ips_failed_count)
+        failed_c_ips_dict = self.filter(dict(self.counter(failed_c_ips)), self.ips_failed_count)
 
         # 2、判断爆破行为是否成功，
         for correct_info in correct_infos:
             for failed in failed_ip_dict:
-                if correct_info['ip'] in failed: self.correct_baopo_infos.append(correct_info)
+                if correct_info['ip'] in failed:
+                    self.correct_baopo_infos.append(correct_info)
             for failed in failed_c_ips_dict:
-                if correct_info['ip'].rsplit('.', 1)[0] in failed: self.correct_baopo_infos.append(correct_info)
+                if correct_info['ip'].rsplit('.', 1)[0] in failed:
+                    self.correct_baopo_infos.append(correct_info)
 
-        self.correct_baopo_infos = self.reRepeat(self.correct_baopo_infos)
+        self.correct_baopo_infos = self.unique_it(self.correct_baopo_infos)
 
 
 if __name__ == '__main__':
     # print SSH_Analysis(log="secure", log_dir="").correct_baopo_infos
     parser = optparse.OptionParser()
-    parser.add_option("-d", "--dir", dest="dir", help=u"target dir，demo: -d /var/log/")
-    parser.add_option("-f", "--file", dest="file", help=u"target file，demo: -p /var/log/secure")
+    parser.add_option("-d", "--dir", dest="dir", help="target dir，demo: -d /var/log/")
+    parser.add_option("-f", "--file", dest="file", help="target file，demo: -p /var/log/secure")
     options, _ = parser.parse_args()
-    options.file = 'secure'
+    options.file = '/var/log/secure'
     if options.dir or options.file:
-        print(u'存在爆破且成功的信息：')
-        print(SSH_Analysis(log=options.file, log_dir=options.dir).correct_baopo_infos)
+        print('bruteforce and succeed information: ')
+        print(SSHAnalysis(log=options.file, log_dir=options.dir).correct_baopo_infos)
     else:
         parser.print_help()

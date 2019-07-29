@@ -1,45 +1,52 @@
 # coding:utf-8
+from __future__ import print_function
+from __future__ import unicode_literals
 
-import os, optparse, time
-from lib.core.option import *
-from lib.core.globalvar import *
-from lib.core.common import *
-from lib.plugins.Host_Info import *
-from lib.plugins.File_Analysis import *
-from lib.plugins.History_Analysis import *
-from lib.plugins.Proc_Analysis import *
-from lib.plugins.Network_Analysis import *
-from lib.plugins.Backdoor_Analysis import *
-from lib.plugins.User_Analysis import *
-from lib.plugins.Config_Analysis import *
-from lib.plugins.Log_Analysis import *
-from lib.plugins.Rootkit_Analysis import *
-from lib.plugins.Webshell_Analysis import *
-from lib.plugins.Sys_Init import *
-from lib.plugins.Search_File import *
-from lib.core.data_aggregation import *
+from lib.plugins.HostInfo import *
+from lib.plugins.FileAnalysis import *
+from lib.plugins.HistoryAnalysis import *
+from lib.plugins.ProcAnalysis import *
+from lib.plugins.NetworkAnalysis import *
+from lib.plugins.BackdoorAnalysis import *
+from lib.plugins.UserAnalysis import *
+from lib.plugins.ConfigAnalysis import *
+from lib.plugins.LogAnalysis import *
+from lib.plugins.RootkitAnalysis import *
+from lib.plugins.WebshellAnalysis import *
+from lib.plugins.SysInit import *
+from lib.plugins.SearchFile import *
+from lib.core.dataaggregation import *
 
 
 def main(path):
     parser = optparse.OptionParser()
-    parser.add_option("--version", dest="version", default=False, action='store_true', help=u"当前程序版本")
+    parser.add_option("--version", dest="version", default=False, action='store_true', help="current version")
 
     group = optparse.OptionGroup(parser, "Mode", "GScan running mode options")
-    group.add_option("--overseas", dest="overseas", default=False, action='store_true', help=u"境外模式，此参数将不进行境外ip的匹配")
-    group.add_option("--full", dest="full_scan", default=False, action='store_true', help=u"完全模式，此参数将启用完全扫描")
-    group.add_option("--debug", dest="debug", default=False, action='store_true', help=u"调试模式，进行程序的调试数据输出")
-    group.add_option("--dif", dest="diffect", default=False, action='store_true', help=u"差异模式，比对上一次的结果，输出差异结果信息。")
-    group.add_option("--sug", dest="suggestion", default=False, action='store_true', help=u"排查建议，用于对异常点的手工排查建议")
-    group.add_option("--pro", dest="programme", default=False, action='store_true', help=u"处理方案，根据异常风险生成初步的处理方案")
+    group.add_option("--overseas", dest="overseas", default=False, action='store_true',
+                     help="Overseas Mode, do not match overseas IP")
+    group.add_option("--full", dest="full_scan", default=False, action='store_true',
+                     help="Full Scan Mode")
+    group.add_option("--debug", dest="debug", default=False, action='store_true',
+                     help="Debug Mode, more verbose information output")
+    group.add_option("--dif", dest="diffect", default=False, action='store_true',
+                     help="Differential-scan Mode, compare with last scan results")
+    group.add_option("--sug", dest="suggestion", default=False, action='store_true',
+                     help="Manual troubleshooting suggestions")
+    group.add_option("--pro", dest="programme", default=False, action='store_true',
+                     help="Output solution")
 
     parser.add_option_group(group)
 
     group = optparse.OptionGroup(parser, "Optimization", "Optimization options")
     group.add_option("--time", dest="time", type='string',
-                     help=u"搜索指定时间内主机改动过的所有文件，demo: --time='2019-05-07 00:00:00~2019-05-07 23:00:00'")
-    group.add_option("--job", dest="job", default=False, action='store_true', help=u"添加定时任务，用于定时执行程序（默认每天零点执行一次）")
-    group.add_option("--hour", dest="hour", type='string', help=u"定时任务，每N小时执行一次")
-    group.add_option("--log", dest="logdir", default=False, action='store_true', help=u"打包当前系统的所有安全日志（暂不支持）")
+                     help="Search for changed files within a specified time, "
+                          "demo: --time='2019-05-07 00:00:00~2019-05-07 23:00:00'")
+    group.add_option("--job", dest="job", default=False, action='store_true',
+                     help="Add to crontab (default, run once a day at 0:00)")
+    group.add_option("--hour", dest="hour", type='string', help="run once every N hour(s)")
+    group.add_option("--log", dest="logdir", default=False, action='store_true',
+                     help="Back up all security logs of the current system (Not supported yet)")
     parser.add_option_group(group)
 
     options, _ = parser.parse_args()
@@ -69,55 +76,55 @@ def main(path):
     set_value('RESULT_INFO', [])
 
     if options.logdir:
-        print(u'\033[1;32m开始备份整个系统安全日志...\033[0m\n')
-        print(u'\033[1;32m此功能暂不支持\033[0m\n')
+        print('\033[1;32mStart backing up the system security log...\033[0m\n')
+        print('\033[1;32mNot supported yet\033[0m\n')
     elif options.job:
-        print(u'\033[1;32m开始添加定时任务，建议添加任务之前先进行一次入侵检测扫描。\033[0m\n')
+        print('\033[1;32mAdd a timed task, we recommend that you perform a scan before adding.\033[0m\n')
         if cron_write('0' if not options.hour else options.hour):
-            print(u'任务添加完毕，可使用crontab -l命令查看任务')
+            print('Timing task added, via "crontab -l" check it.')
         else:
-            print(u'\033[1;31m添加失败，建议手工添加任务,参考命令crontab -e\033[0m\n')
+            print('\033[1;31mAdding failed, it is recommended to add it manually. via "crontab -e"\033[0m\n')
     elif options.time:
-        print(u'\033[1;32m开始进行文件搜索...\033[0m\n')
-        Search_File(options.time).run()
+        print('\033[1;32mStart file search...\033[0m\n')
+        SearchFile(options.time).run()
     elif options.version:
         return
     else:
         # 创建日志文件
         mkfile()
-        file_write(u'开始扫描当前系统安全状态...\n')
-        print(u'\033[1;32m开始扫描当前系统安全状态...\033[0m')
+        file_write('Start system security scanning...\n')
+        print('\033[1;32mStart system security scanning...\033[0m')
         # 获取恶意特征信息
         get_malware_info(path)
         # 主机信息获取
-        Host_Info().run()
+        HostInfo().run()
         # 系统初始化检查
-        SYS_INIT().run()
+        SysInit().run()
         # 文件类安全检测
-        File_Analysis().run()
+        FileAnalysis().run()
         # 主机历史操作类扫描
-        History_Analysis().run()
+        HistoryAnalysis().run()
         # 主机进程类安全扫描
-        Proc_Analysis().run()
+        ProcAnalysis().run()
         # 网络链接类安全扫描
-        Network_Analysis().run()
+        NetworkAnalysis().run()
         # 后门类扫描
-        Backdoor_Analysis().run()
+        BackdoorAnalysis().run()
         # 账户类扫描
-        User_Analysis().run()
+        UserAnalysis().run()
         # 安全日志类
-        Log_Analysis().run()
+        LogAnalysis().run()
         # 安全配置类
-        Config_Analysis().run()
+        ConfigAnalysis().run()
         # rootkit检测
-        Rootkit_Analysis().run()
+        RootkitAnalysis().run()
         # WEBShell类扫描
-        Webshell_Analysis().run()
+        WebshellAnalysis().run()
         # 漏洞扫描
 
         # 路径追溯
-        Data_Aggregation().run()
+        DataAggregation().run()
 
         # 输出报告
-        print(u'-' * 30)
-        print(u'\033[1;32m扫描完毕，扫描结果已记入到 %s 文件中，请及时查看\033[0m' % get_value('LOG_PATH'))
+        print('-' * 30)
+        print('\033[1;32mScan completed. The result has been saved to the file(%s).\033[0m' % get_value('LOG_PATH'))
